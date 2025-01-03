@@ -52,6 +52,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -97,6 +98,7 @@ import com.geeksville.mesh.model.getChannel
 import com.geeksville.mesh.ui.components.NodeKeyStatusIcon
 import com.geeksville.mesh.ui.components.NodeMenuAction
 import com.geeksville.mesh.ui.message.components.MessageList
+import com.geeksville.mesh.ui.message.components.TicTacToe
 import com.geeksville.mesh.ui.navigateToNavGraph
 import com.geeksville.mesh.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -213,6 +215,8 @@ internal fun MessageScreen(
         )
     }
 
+    var showGame by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             if (inSelectionMode) {
@@ -242,7 +246,13 @@ internal fun MessageScreen(
                     }
                 }
             } else {
-                MessageTopBar(title, channelIndex, onNavigateBack)
+                MessageTopBar(
+                    title = title,
+                    channelIndex = channelIndex,
+                    onNavigateBack = onNavigateBack,
+                    showGame = showGame,
+                    onToggleGame = { showGame = !showGame }
+                )
             }
         },
         bottomBar = {
@@ -270,22 +280,27 @@ internal fun MessageScreen(
             }
         }
     ) { innerPadding ->
-        if (messages.isNotEmpty()) {
-            MessageList(
-                messages = messages,
-                selectedIds = selectedIds,
-                onUnreadChanged = { viewModel.clearUnreadCount(contactKey, it) },
-                contentPadding = innerPadding,
-                onSendReaction = { emoji, id -> viewModel.sendReaction(emoji, id, contactKey) },
-            ) { action ->
-                when (action) {
-                    is NodeMenuAction.Remove -> viewModel.removeNode(action.node.num)
-                    is NodeMenuAction.Ignore -> viewModel.ignoreNode(action.node)
-                    is NodeMenuAction.DirectMessage -> navigateToMessages(action.node)
-                    is NodeMenuAction.RequestUserInfo -> viewModel.requestUserInfo(action.node.num)
-                    is NodeMenuAction.RequestPosition -> viewModel.requestPosition(action.node.num)
-                    is NodeMenuAction.TraceRoute -> viewModel.requestTraceroute(action.node.num)
-                    is NodeMenuAction.MoreDetails -> navigateToNodeDetails(action.node.num)
+        Column {
+            if (showGame) {
+                TicTacToe()
+            }
+            if (messages.isNotEmpty()) {
+                MessageList(
+                    messages = messages,
+                    selectedIds = selectedIds,
+                    onUnreadChanged = { viewModel.clearUnreadCount(contactKey, it) },
+                    contentPadding = innerPadding,
+                    onSendReaction = { emoji, id -> viewModel.sendReaction(emoji, id, contactKey) },
+                ) { action ->
+                    when (action) {
+                        is NodeMenuAction.Remove -> viewModel.removeNode(action.node.num)
+                        is NodeMenuAction.Ignore -> viewModel.ignoreNode(action.node)
+                        is NodeMenuAction.DirectMessage -> navigateToMessages(action.node)
+                        is NodeMenuAction.RequestUserInfo -> viewModel.requestUserInfo(action.node.num)
+                        is NodeMenuAction.RequestPosition -> viewModel.requestPosition(action.node.num)
+                        is NodeMenuAction.TraceRoute -> viewModel.requestTraceroute(action.node.num)
+                        is NodeMenuAction.MoreDetails -> navigateToNodeDetails(action.node.num)
+                    }
                 }
             }
         }
@@ -365,7 +380,9 @@ private fun ActionModeTopBar(
 private fun MessageTopBar(
     title: String,
     channelIndex: Int?,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    showGame: Boolean,
+    onToggleGame: () -> Unit
 ) = TopAppBar(
     title = { Text(text = title) },
     navigationIcon = {
@@ -379,6 +396,12 @@ private fun MessageTopBar(
     actions = {
         if (channelIndex == DataPacket.PKC_CHANNEL_INDEX) {
             NodeKeyStatusIcon(hasPKC = true, mismatchKey = false)
+            IconButton(onClick = onToggleGame) {
+                Icon(
+                    imageVector = Icons.Default.VideogameAsset,
+                    contentDescription = "Games",
+                )
+            }
         }
     }
 )
